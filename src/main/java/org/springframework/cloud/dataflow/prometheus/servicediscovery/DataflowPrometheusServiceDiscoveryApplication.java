@@ -55,12 +55,15 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	private final ObjectMapper objectMapper;
 	private final RestTemplate restTemplate;
 
+
+	public enum TargetMode {local, promregator}
+
 	/**
 	 * Url of the the SCDF Runtime REST endpoint:
 	 * https://docs.spring.io/spring-cloud-dataflow/docs/current/reference/htmlsingle/#api-guide-resources-runtime-information-applications
 	 */
-	@Value("${metrics.prometheus.target.dataflow.runtime.url:http://localhost:9393/runtime/apps}")
-	private String runtimeAppsUrl;
+	@Value("${metrics.prometheus.target.discovery.url:http://localhost:9393/runtime/apps}")
+	private String targetDiscoveryUrl;
 
 	/**
 	 * Path where the generated targets.json file is stored.
@@ -71,6 +74,9 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	// For k8s deployment use 'pod.ip' instead of 'url'
 	@Value("${metrics.prometheus.target.dataflow.runtime.attribute.name:url}")
 	private String attributeName;
+
+	@Value("${metrics.prometheus.target.mode:local}")
+	private TargetMode targetMode;
 
 	public DataflowPrometheusServiceDiscoveryApplication() {
 		this.objectMapper = Jackson2ObjectMapperBuilder.json().modules(new Jackson2HalModule()).build();
@@ -90,7 +96,25 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	@Scheduled(fixedRateString = "${metrics.prometheus.target.refresh.rate:15000}")
 	public void updateTargets() throws IOException {
 
-		AppStatusResource.Page page = this.restTemplate.getForObject(this.runtimeAppsUrl, AppStatusResource.Page.class);
+		String targetsJson;
+		if (this.targetMode == TargetMode.local) {
+			targetsJson = this.findTargetsFromDataflowRuntimeApps();
+		}
+		else if (this.targetMode == TargetMode.promregator) {
+			targetsJson = this.findTargetsWithPromregator();
+		}
+		else {
+			throw new IllegalStateException("Unknown target mode:" + this.targetMode);
+		}
+
+		logger.info(targetsJson);
+
+		this.updateTargetsFile(targetsJson);
+	}
+
+	public String findTargetsFromDataflowRuntimeApps() throws IOException {
+
+		AppStatusResource.Page page = this.restTemplate.getForObject(this.targetDiscoveryUrl, AppStatusResource.Page.class);
 
 		List<String> targetUrls = page.getContent().stream()
 				.map(appResource -> appResource.getInstances().getContent())
@@ -98,11 +122,12 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 				.map(url -> url.replace("http://", ""))
 				.collect(Collectors.toList());
 
-		String targetsJson = this.buildPrometheusTargetsJson(targetUrls);
+		return this.buildPrometheusTargetsJson(targetUrls);
+	}
 
-		logger.info(targetsJson);
-
-		this.updateTargetsFile(targetsJson);
+	private String findTargetsWithPromregator() throws IOException {
+		Object b = new RestTemplate().getForObject(this.targetDiscoveryUrl, Object.class);
+		return this.objectMapper.writeValueAsString(b);
 	}
 
 	/**
