@@ -107,7 +107,7 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 			throw new IllegalStateException("Unknown target mode:" + this.targetMode);
 		}
 
-		logger.info(targetsJson);
+		logger.info(this.targetMode + ": " + targetsJson);
 
 		this.updateTargetsFile(targetsJson);
 	}
