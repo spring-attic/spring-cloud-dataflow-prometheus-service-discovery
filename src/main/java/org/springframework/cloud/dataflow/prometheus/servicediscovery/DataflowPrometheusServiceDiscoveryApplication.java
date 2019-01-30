@@ -37,6 +37,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 /**
@@ -77,6 +78,9 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 
 	@Value("${metrics.prometheus.target.mode:local}")
 	private TargetMode targetMode;
+
+	@Value("${metrics.prometheus.target.override.ip:''}")
+	private String targetOverrideIp;
 
 	public DataflowPrometheusServiceDiscoveryApplication() {
 		this.objectMapper = Jackson2ObjectMapperBuilder.json().modules(new Jackson2HalModule()).build();
@@ -119,10 +123,17 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 		List<String> targetUrls = page.getContent().stream()
 				.map(appResource -> appResource.getInstances().getContent())
 				.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.attributeName)))
-				.map(url -> url.replace("http://", ""))
+				.map(this::formatTargetUrl)
 				.collect(Collectors.toList());
 
 		return this.buildPrometheusTargetsJson(targetUrls);
+	}
+
+	private String formatTargetUrl(String runtimeAppUrl) {
+		String targetUrl = runtimeAppUrl.replace("http://", "");
+
+		return (StringUtils.hasText(this.targetOverrideIp))?
+			this.targetOverrideIp + targetUrl.substring(targetUrl.indexOf(":")): targetUrl;
 	}
 
 	private String findTargetsWithPromregator() throws IOException {
