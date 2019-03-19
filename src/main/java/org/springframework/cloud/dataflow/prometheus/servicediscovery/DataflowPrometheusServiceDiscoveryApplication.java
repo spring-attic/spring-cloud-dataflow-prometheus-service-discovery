@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +98,7 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	 *
 	 * @throws IOException
 	 */
-	@Scheduled(fixedRateString = "${metrics.prometheus.target.refresh.rate:15000}")
+	@Scheduled(cron = "${metrics.prometheus.target.refresh.cron:0/30 * * * * *}")
 	public void updateTargets() throws IOException {
 
 		String targetsJson;
@@ -116,24 +117,30 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 		this.updateTargetsFile(targetsJson);
 	}
 
-	public String findTargetsFromDataflowRuntimeApps() throws IOException {
+	public String findTargetsFromDataflowRuntimeApps() {
 
-		AppStatusResource.Page page = this.restTemplate.getForObject(this.targetDiscoveryUrl, AppStatusResource.Page.class);
+		try {
+			AppStatusResource.Page page = this.restTemplate.getForObject(this.targetDiscoveryUrl, AppStatusResource.Page.class);
 
-		List<String> targetUrls = page.getContent().stream()
-				.map(appResource -> appResource.getInstances().getContent())
-				.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.attributeName)))
-				.map(this::formatTargetUrl)
-				.collect(Collectors.toList());
+			List<String> targetUrls = page.getContent().stream()
+					.map(appResource -> appResource.getInstances().getContent())
+					.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.attributeName)))
+					.map(this::formatTargetUrl)
+					.collect(Collectors.toList());
 
-		return this.buildPrometheusTargetsJson(targetUrls);
+			return this.buildPrometheusTargetsJson(targetUrls);
+		}
+		catch (Exception e) {
+			logger.error(ExceptionUtils.getMessage(e));
+		}
+		return "";
 	}
 
 	private String formatTargetUrl(String runtimeAppUrl) {
 		String targetUrl = runtimeAppUrl.replace("http://", "");
 
-		return (StringUtils.hasText(this.targetOverrideIp))?
-			this.targetOverrideIp + targetUrl.substring(targetUrl.indexOf(":")): targetUrl;
+		return (StringUtils.hasText(this.targetOverrideIp)) ?
+				this.targetOverrideIp + targetUrl.substring(targetUrl.indexOf(":")) : targetUrl;
 	}
 
 	private String findTargetsWithPromregator() throws IOException {
@@ -160,9 +167,11 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	 * @throws IOException
 	 */
 	private void updateTargetsFile(String targetsJson) throws IOException {
-		FileWriter fw = new FileWriter(this.outputTargetFilePath);
-		fw.write(targetsJson);
-		fw.close();
+		if (StringUtils.hasText(targetsJson)) {
+			FileWriter fw = new FileWriter(this.outputTargetFilePath);
+			fw.write(targetsJson);
+			fw.close();
+		}
 	}
 
 	/**
