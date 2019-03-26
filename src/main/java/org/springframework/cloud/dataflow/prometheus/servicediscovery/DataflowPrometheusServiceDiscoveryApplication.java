@@ -65,7 +65,6 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	public DataflowPrometheusServiceDiscoveryApplication() {
 		this.objectMapper = Jackson2ObjectMapperBuilder.json().modules(new Jackson2HalModule()).build();
 		this.restTemplate = new RestTemplate(Arrays.asList(new MappingJackson2HttpMessageConverter(this.objectMapper)));
-
 	}
 
 	public static void main(String[] args) {
