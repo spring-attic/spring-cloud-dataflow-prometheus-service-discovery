@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 the original author or authors.
+ * Copyright 2018-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,10 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.dataflow.rest.resource.AppStatusResource;
 import org.springframework.hateoas.hal.Jackson2HalModule;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -51,37 +52,15 @@ import org.springframework.web.client.RestTemplate;
  */
 @SpringBootApplication
 @EnableScheduling
+@EnableConfigurationProperties(DataflowPrometheusServiceDiscoveryProperties.class)
 public class DataflowPrometheusServiceDiscoveryApplication {
 
 	private final Logger logger = LoggerFactory.getLogger(DataflowPrometheusServiceDiscoveryApplication.class);
 	private final ObjectMapper objectMapper;
 	private final RestTemplate restTemplate;
 
-
-	public enum TargetMode {local, promregator}
-
-	/**
-	 * Url of the the SCDF Runtime REST endpoint:
-	 * https://docs.spring.io/spring-cloud-dataflow/docs/current/reference/htmlsingle/#api-guide-resources-runtime-information-applications
-	 */
-	@Value("${metrics.prometheus.target.discovery.url:http://localhost:9393/runtime/apps}")
-	private String targetDiscoveryUrl;
-
-	/**
-	 * Path where the generated targets.json file is stored.
-	 */
-	@Value("${metrics.prometheus.target.file.path:/tmp/targets.json}")
-	private String outputTargetFilePath;
-
-	// For k8s deployment use 'pod.ip' instead of 'url'
-	@Value("${metrics.prometheus.target.dataflow.runtime.attribute.name:url}")
-	private String attributeName;
-
-	@Value("${metrics.prometheus.target.mode:local}")
-	private TargetMode targetMode;
-
-	@Value("${metrics.prometheus.target.override.ip:''}")
-	private String targetOverrideIp;
+	@Autowired
+	private DataflowPrometheusServiceDiscoveryProperties properties;
 
 	public DataflowPrometheusServiceDiscoveryApplication() {
 		this.objectMapper = Jackson2ObjectMapperBuilder.json().modules(new Jackson2HalModule()).build();
@@ -96,35 +75,34 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	/**
 	 * Use the metrics.prometheus.target.refresh.rate property (in milliseconds) to change the targets discovery rate.
 	 *
-	 * @throws IOException
 	 */
 	@Scheduled(cron = "${metrics.prometheus.target.refresh.cron:0/30 * * * * *}")
 	public void updateTargets() throws IOException {
 
 		String targetsJson;
-		if (this.targetMode == TargetMode.local) {
-			targetsJson = this.findTargetsFromDataflowRuntimeApps();
+		if (this.properties.getMode() == DataflowPrometheusServiceDiscoveryProperties.TargetMode.local) {
+			targetsJson = this.findTargetsFromDataFlowRuntimeApps();
 		}
-		else if (this.targetMode == TargetMode.promregator) {
+		else if (this.properties.getMode() == DataflowPrometheusServiceDiscoveryProperties.TargetMode.promregator) {
 			targetsJson = this.findTargetsWithPromregator();
 		}
 		else {
-			throw new IllegalStateException("Unknown target mode:" + this.targetMode);
+			throw new IllegalStateException("Unknown target mode:" + this.properties.getMode());
 		}
 
-		logger.info(this.targetMode + ": " + targetsJson);
+		logger.info(this.properties.getMode() + ": " + targetsJson);
 
 		this.updateTargetsFile(targetsJson);
 	}
 
-	public String findTargetsFromDataflowRuntimeApps() {
+	public String findTargetsFromDataFlowRuntimeApps() {
 
 		try {
-			AppStatusResource.Page page = this.restTemplate.getForObject(this.targetDiscoveryUrl, AppStatusResource.Page.class);
+			AppStatusResource.Page page = this.restTemplate.getForObject(this.properties.getDiscoveryUrl(), AppStatusResource.Page.class);
 
 			List<String> targetUrls = page.getContent().stream()
 					.map(appResource -> appResource.getInstances().getContent())
-					.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.attributeName)))
+					.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.properties.getAttributeName())))
 					.map(this::formatTargetUrl)
 					.collect(Collectors.toList());
 
@@ -139,12 +117,12 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	private String formatTargetUrl(String runtimeAppUrl) {
 		String targetUrl = runtimeAppUrl.replace("http://", "");
 
-		return (StringUtils.hasText(this.targetOverrideIp)) ?
-				this.targetOverrideIp + targetUrl.substring(targetUrl.indexOf(":")) : targetUrl;
+		return (StringUtils.hasText(this.properties.getOverrideIp())) ?
+				this.properties.getOverrideIp() + targetUrl.substring(targetUrl.indexOf(":")) : targetUrl;
 	}
 
 	private String findTargetsWithPromregator() throws IOException {
-		Object b = new RestTemplate().getForObject(this.targetDiscoveryUrl, Object.class);
+		Object b = new RestTemplate().getForObject(this.properties.getDiscoveryUrl(), Object.class);
 		return this.objectMapper.writeValueAsString(b);
 	}
 
@@ -168,7 +146,7 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	 */
 	private void updateTargetsFile(String targetsJson) throws IOException {
 		if (StringUtils.hasText(targetsJson)) {
-			FileWriter fw = new FileWriter(this.outputTargetFilePath);
+			FileWriter fw = new FileWriter(this.properties.getFilePath());
 			fw.write(targetsJson);
 			fw.close();
 		}
@@ -180,6 +158,7 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	 */
 	public static class StaticConfig {
 		private List<String> targets;
+
 		private Map<String, String> labels;
 
 		public List<String> getTargets() {
