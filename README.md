@@ -2,7 +2,7 @@
 
 Sample service that uses the SCDF's runtime applications metadata to discover SpringBoot applications to be monitored with Prometheus.
 
-NOTE: Works only for SCDF local deployer and should be used only for test/demo purposes! 
+> Works only for SCDF local deployer and should be used only for test/demo purposes! 
 
 Prometheus Service Discovery for SCSt apps deployed with the Local Deployer. 
 It is build on top of the [file_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#%3Cfile_sd_config%3E) mechanism.
@@ -10,7 +10,7 @@ It is build on top of the [file_sd_config](https://prometheus.io/docs/prometheus
 
 ### Local Mode 
 
-Note: `SCDF_HOST_IP` should point to the actual IP of the host where SCDF runs (127.0.0.1 would not work in docker-compose settings)
+> `SCDF_HOST_IP` should point to the actual IP of the host where SCDF runs (127.0.0.1 would not work in docker-compose settings)
 
 ```bash
 export SCDF_HOST_IP=Your-Local-Host-IP
