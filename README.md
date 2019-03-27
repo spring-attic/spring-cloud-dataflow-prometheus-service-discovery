@@ -1,4 +1,4 @@
-## Spring Cloud Data Flow - Prometheus Service Discovery (Local Deployer)
+# Spring Cloud Data Flow - Prometheus Service Discovery (Local Deployer)
 
 > NOTE: This tool should be used only for test/demo purposes! Don't use it in production!
 
@@ -22,7 +22,7 @@ The `file_sd_config` file format looks like this:
 The `targets` field hods the list of the applications to be scraped by Prometheus. 
 
 
-### Local Mode 
+## Local Mode 
 
 Following Spring Cloud Data Flow diagram illustrates how the `service-discovery` is used in a `local` SCDF deployment to provide `Prometheus` with the target urls to scrap.
 When in `metrics.prometheus.target.mode=local` mode the `service-discovery`, uses the [runtime/apps](http://docs.spring.io/spring-cloud-dataflow/docs/2.0.1.RELEASE/reference/htmlsingle/#api-guide-resources-runtime-information-applications-listing-all) 
@@ -48,7 +48,7 @@ java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
    --metrics.prometheus.target.overrideIp=${SCDF_HOST_IP}
 ```
 
-### PromRegator Mode
+## PromRegator Mode
 
 The [SCDF Prometheus monitoring on Cloud Foundry](https://docs.google.com/document/d/1XGwjn1wUW843q8G8SEsZYuMRuBIKhsufH0yUEaLMbPc/edit?usp=sharing) requires the Pomregator service. 
 In this use-case the `service-disovery` retrieves the targets urls from `PromRegator` instead of SCDF's `runtime/apps` 
