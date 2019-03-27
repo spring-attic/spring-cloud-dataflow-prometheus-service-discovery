@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 the original author or authors.
+ * Copyright 2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,7 @@ package org.springframework.cloud.dataflow.prometheus.servicediscovery;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,20 +25,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.dataflow.rest.resource.AppStatusResource;
-import org.springframework.hateoas.hal.Jackson2HalModule;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * Prometheus Service Discovery for SCSt apps deployed with the Local Deployer (?k8s?). It is build on top of the
  * file_sd_config mechanism
  *
- * https://prometheus.io/docs/prometheus/latest/configuration/configuration/#%3Cfile_sd_config%3E
+ * https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config
  *
  * @author Christian Tzolov
  */
@@ -56,16 +43,12 @@ import org.springframework.web.client.RestTemplate;
 public class DataflowPrometheusServiceDiscoveryApplication {
 
 	private final Logger logger = LoggerFactory.getLogger(DataflowPrometheusServiceDiscoveryApplication.class);
-	private final ObjectMapper objectMapper;
-	private final RestTemplate restTemplate;
+
+	@Autowired
+	private TargetsResolver targetsResolver;
 
 	@Autowired
 	private DataflowPrometheusServiceDiscoveryProperties properties;
-
-	public DataflowPrometheusServiceDiscoveryApplication() {
-		this.objectMapper = Jackson2ObjectMapperBuilder.json().modules(new Jackson2HalModule()).build();
-		this.restTemplate = new RestTemplate(Arrays.asList(new MappingJackson2HttpMessageConverter(this.objectMapper)));
-	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(DataflowPrometheusServiceDiscoveryApplication.class, args);
@@ -75,67 +58,14 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 	 * Use the metrics.prometheus.target.refresh.rate property (in milliseconds) to change the targets discovery rate.
 	 *
 	 */
-	@Scheduled(cron = "${metrics.prometheus.target.refresh.cron:0/30 * * * * *}")
+	@Scheduled(cron = "${metrics.prometheus.target.cron:0/30 * * * * *}")
 	public void updateTargets() throws IOException {
 
-		String targetsJson;
-		if (this.properties.getMode() == DataflowPrometheusServiceDiscoveryProperties.TargetMode.local) {
-			targetsJson = this.findTargetsFromDataFlowRuntimeApps();
-		}
-		else if (this.properties.getMode() == DataflowPrometheusServiceDiscoveryProperties.TargetMode.promregator) {
-			targetsJson = this.findTargetsWithPromregator();
-		}
-		else {
-			throw new IllegalStateException("Unknown target mode:" + this.properties.getMode());
-		}
+		String targetsJson = this.targetsResolver.getTargets();
 
 		logger.info(this.properties.getMode() + ": " + targetsJson);
 
 		this.updateTargetsFile(targetsJson);
-	}
-
-	public String findTargetsFromDataFlowRuntimeApps() {
-
-		try {
-			AppStatusResource.Page page = this.restTemplate.getForObject(this.properties.getDiscoveryUrl(), AppStatusResource.Page.class);
-
-			List<String> targetUrls = page.getContent().stream()
-					.map(appResource -> appResource.getInstances().getContent())
-					.flatMap(instances -> instances.stream().map(inst -> inst.getAttributes().get(this.properties.getAttributeName())))
-					.map(this::formatTargetUrl)
-					.collect(Collectors.toList());
-
-			return this.buildPrometheusTargetsJson(targetUrls);
-		}
-		catch (Exception e) {
-			logger.error(ExceptionUtils.getMessage(e));
-		}
-		return "";
-	}
-
-	private String formatTargetUrl(String runtimeAppUrl) {
-		String targetUrl = runtimeAppUrl.replace("http://", "");
-
-		return (StringUtils.hasText(this.properties.getOverrideIp())) ?
-				this.properties.getOverrideIp() + targetUrl.substring(targetUrl.indexOf(":")) : targetUrl;
-	}
-
-	private String findTargetsWithPromregator() throws IOException {
-		Object b = new RestTemplate().getForObject(this.properties.getDiscoveryUrl(), Object.class);
-		return this.objectMapper.writeValueAsString(b);
-	}
-
-	/**
-	 * Converts a list of urls into JSON list of static target configs, compliant with the file_sd_config format.
-	 * @param targetUrls list of SCSt apps ip:ports to be used as prometheus metrics targets.
-	 * @return json record compliant with file_sd_config
-	 * @throws JsonProcessingException
-	 */
-	private String buildPrometheusTargetsJson(List<String> targetUrls) throws JsonProcessingException {
-		StaticConfig staticConfig = new StaticConfig();
-		staticConfig.setTargets(targetUrls);
-		staticConfig.setLabels(Collections.singletonMap("job", "scdf"));
-		return this.objectMapper.writeValueAsString(Arrays.asList(staticConfig));
 	}
 
 	/**
@@ -148,32 +78,6 @@ public class DataflowPrometheusServiceDiscoveryApplication {
 			FileWriter fw = new FileWriter(this.properties.getFilePath());
 			fw.write(targetsJson);
 			fw.close();
-		}
-	}
-
-	/**
-	 * Java model used as JSON representation of Prometheus' static target format.
-	 * https://prometheus.io/docs/prometheus/latest/configuration/configuration/#%3Cfile_sd_config%3E
-	 */
-	public static class StaticConfig {
-		private List<String> targets;
-
-		private Map<String, String> labels;
-
-		public List<String> getTargets() {
-			return targets;
-		}
-
-		public void setTargets(List<String> targets) {
-			this.targets = targets;
-		}
-
-		public Map<String, String> getLabels() {
-			return labels;
-		}
-
-		public void setLabels(Map<String, String> labels) {
-			this.labels = labels;
 		}
 	}
 }

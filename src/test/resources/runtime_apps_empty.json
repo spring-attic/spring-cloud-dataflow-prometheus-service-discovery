@@ -1,0 +1,13 @@
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/runtime/apps?page=0&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 0,
+    "totalPages": 0,
+    "number": 0
+  }
+}

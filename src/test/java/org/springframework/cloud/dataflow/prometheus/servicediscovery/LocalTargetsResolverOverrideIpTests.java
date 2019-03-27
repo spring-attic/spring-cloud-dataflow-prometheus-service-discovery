@@ -20,50 +20,48 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
-import org.awaitility.Duration;
-import org.junit.Assert;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestTemplate;
 
-import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(properties = {
-		"metrics.prometheus.target.discoveryUrl=http://somehost:9393/runtime/apps",
-		"metrics.prometheus.target.cron=* * * * * *",
-		"metrics.prometheus.target.filePath=target/my-targets.json",
-})
-public class SpringCloudDataflowPrometheusServiceDiscoveryApplicationTests {
-
+		"metrics.prometheus.target.cron=" + Scheduled.CRON_DISABLED,
+		"metrics.prometheus.target.overrideIp=66.66.66.66",
+		"metrics.prometheus.target.filePath=./target/my-targets.json"})
+public class LocalTargetsResolverOverrideIpTests {
 
 	private MockRestServiceServer mockServer;
 
 	@Autowired
 	private RestTemplate restTemplate;
 
-	@SpyBean
-	private DataflowPrometheusServiceDiscoveryApplication serviceDiscoveryApplication;
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Autowired
+	private LocalTargetsResolver localTargetsResolver;
 
 	@Before
 	public void init() {
@@ -71,30 +69,29 @@ public class SpringCloudDataflowPrometheusServiceDiscoveryApplicationTests {
 	}
 
 	@Test
-	public void testScheduler() throws URISyntaxException, IOException {
-		Assert.assertNotNull(serviceDiscoveryApplication);
-		mockServer.expect(ExpectedCount.manyTimes(),
-				requestTo(new URI("http://somehost:9393/runtime/apps")))
+	public void testOverrideIp() throws IOException, URISyntaxException {
+
+		mockServer.expect(ExpectedCount.once(),
+				requestTo(new URI("http://localhost:9393/runtime/apps")))
 				.andExpect(method(HttpMethod.GET))
 				.andRespond(withStatus(HttpStatus.OK)
 						.contentType(MediaType.APPLICATION_JSON)
 						.body(asString("classpath:/runtime_apps_ticktock.json"))
 				);
 
-		await().atMost(Duration.TEN_SECONDS)
-				.untilAsserted(() -> verify(serviceDiscoveryApplication,
-						atLeast(10)).updateTargets());
+		String targets = localTargetsResolver.getTargets();
 
 		mockServer.verify();
 
-		String targetsFileContent = asString("file:target/my-targets.json");
-		assertThat(targetsFileContent,
-				is("[{\"targets\":[\"172.18.0.4:20080\",\"172.18.0.4:20032\"],\"labels\":{\"job\":\"scdf\"}}]"));
+		StaticConfig[] scs = objectMapper.readValue(targets, StaticConfig[].class);
+
+		assertThat(scs.length, is(1));
+		assertThat(scs[0].getLabels().get("job"), is("scdf"));
+		assertThat(scs[0].getTargets(), contains("66.66.66.66:20080", "66.66.66.66:20032"));
 	}
 
 	private String asString(String resourceUri) throws IOException {
 		return StreamUtils.copyToString(
 				new DefaultResourceLoader().getResource(resourceUri).getInputStream(), Charset.forName("UTF-8"));
 	}
-
 }

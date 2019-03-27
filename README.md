@@ -16,20 +16,20 @@ It is build on top of the [file_sd_config](https://prometheus.io/docs/prometheus
 export SCDF_HOST_IP=Your-Local-Host-IP
 
 java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
-   --metrics.prometheus.target.discovery.url=http://${SCDF_HOST_IP}:9393/runtime/apps \
-   --metrics.prometheus.target.file.path=/tmp/scdf-targets/targets.json \
-   --metrics.prometheus.target.refresh.cron='0/30 * * * * *' \
+   --metrics.prometheus.target.discoveryUrl=http://${SCDF_HOST_IP}:9393/runtime/apps \
+   --metrics.prometheus.target.filePath=/tmp/scdf-targets/targets.json \
+   --metrics.prometheus.target.cron=0/30 * * * * * \
    --metrics.prometheus.target.mode=local \
-   --metrics.prometheus.target.override.ip=${SCDF_HOST_IP}
+   --metrics.prometheus.target.overrideIp=${SCDF_HOST_IP}
 ```
 
 ### PromRegator Mode
 
 ```bash
 java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
-  --metrics.prometheus.target.discovery.url=http://localhost:8080/discovery \
-  --metrics.prometheus.target.file.path=/tmp/targets.json \
-  --metrics.prometheus.target.refresh.cron='0/30 * * * * *' \
+  --metrics.prometheus.target.discoveryUrl=http://localhost:8080/discovery \
+  --metrics.prometheus.target.filePath=/tmp/targets.json \
+  --metrics.prometheus.target.cron=0/30 * * * * * \
   --metrics.prometheus.target.mode=promregator \
   --server.port=9091
 ```

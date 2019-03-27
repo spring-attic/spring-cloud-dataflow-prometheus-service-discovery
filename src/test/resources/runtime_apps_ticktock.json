@@ -1,0 +1,89 @@
+{
+  "_embedded": {
+    "appStatusResourceList": [
+      {
+        "deploymentId": "t1.log-v1",
+        "state": "deploying",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "t1.log-v1-0",
+                "state": "deploying",
+                "attributes": {
+                  "guid": "20080",
+                  "pid": "68",
+                  "port": "20080",
+                  "skipper.application.name": "log",
+                  "skipper.release.name": "t1",
+                  "skipper.release.version": "1",
+                  "stderr": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673102238/t1.log-v1/stderr_0.log",
+                  "stdout": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673102238/t1.log-v1/stdout_0.log",
+                  "url": "http://172.18.0.4:20080",
+                  "working.dir": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673102238/t1.log-v1"
+                },
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/t1.log-v1/instances/t1.log-v1-0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/t1.log-v1"
+          }
+        }
+      },
+      {
+        "deploymentId": "t1.time-v1",
+        "state": "deploying",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "t1.time-v1-0",
+                "state": "deploying",
+                "attributes": {
+                  "guid": "20032",
+                  "pid": "50",
+                  "port": "20032",
+                  "skipper.application.name": "time",
+                  "skipper.release.name": "t1",
+                  "skipper.release.version": "1",
+                  "stderr": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673097565/t1.time-v1/stderr_0.log",
+                  "stdout": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673097565/t1.time-v1/stdout_0.log",
+                  "url": "http://172.18.0.4:20032",
+                  "working.dir": "/tmp/spring-cloud-deployer-5103329564230463535/t1-1553673097565/t1.time-v1"
+                },
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/t1.time-v1/instances/t1.time-v1-0"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/t1.time-v1"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/runtime/apps?page=0&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 2,
+    "totalPages": 1,
+    "number": 0
+  }
+}
