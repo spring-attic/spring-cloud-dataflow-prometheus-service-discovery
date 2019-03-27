@@ -10,6 +10,9 @@ It is build on top of the [file_sd_config](https://prometheus.io/docs/prometheus
 
 ### Local Mode 
 
+![alt text](src/test/resources/images/scdf-micrometer-prometheus-grafana-architecture.png "Logo Title Text 1")
+
+
 > `SCDF_HOST_IP` should point to the actual IP of the host where SCDF runs (127.0.0.1 would not work in docker-compose settings)
 
 ```bash
