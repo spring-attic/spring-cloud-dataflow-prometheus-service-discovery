@@ -1,4 +1,4 @@
-# Spring Cloud Data Flow - Prometheus Service Discovery (Local Deployer)
+# Spring Cloud Data Flow - Prometheus Service Discovery (for Dev/Test only)
 
 > NOTE: This tool should be used only for test/demo purposes! Don't use it in production!
 
