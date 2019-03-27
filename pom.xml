@@ -42,9 +42,12 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.hateoas</groupId>
 			<artifactId>spring-hateoas</artifactId>
-			<!--<version>${spring-hateoas.version}</version>-->
 		</dependency>
 
 		<dependency>
@@ -99,12 +102,14 @@
 										<arg>-Dlogging.path=/var/log/service-discovery</arg>
 										<arg>-jar</arg>
 										<arg>/maven/spring-cloud-dataflow-prometheus-service-discovery.jar</arg>
-										<arg>--server.port=8181</arg>
+										<!--<arg>&#45;&#45;server.port=8181</arg>-->
 										<arg>--metrics.prometheus.target.discoveryUrl=http://${SCDF_HOST_IP}:9393/runtime/apps</arg>
-										<arg>--metrics.prometheus.target.filePath=/tmp/scdf-targets/targets.json</arg>
-										<arg>--metrics.prometheus.target.cron="0/30 * * * * *"</arg>
+										<!--<arg>&#45;&#45;metrics.prometheus.target.filePath=/tmp/scdf-targets/targets.json</arg>-->
+										<!--<arg>&#45;&#45;metrics.prometheus.target.cron=0/30 * * * * *</arg>-->
 										<arg>--metrics.prometheus.target.mode=local</arg>
 										<arg>--metrics.prometheus.target.overrideIp=${SCDF_HOST_IP}</arg>
+										<arg>--management.endpoint.env.enabled=true</arg>
+										<arg>--management.endpoints.web.exposure.include=env,info,health</arg>
 									</exec>
 								</entryPoint>
 								<assembly>
