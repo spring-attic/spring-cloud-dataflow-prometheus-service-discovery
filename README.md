@@ -50,6 +50,9 @@ java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
 
 ### PromRegator Mode
 
+The [SCDF Prometheus monitoring on Cloud Foundry](https://docs.google.com/document/d/1XGwjn1wUW843q8G8SEsZYuMRuBIKhsufH0yUEaLMbPc/edit?usp=sharing) requires the Pomregator service. 
+In this use-case the `service-disovery` retrieves the targets urls from `PromRegator` instead of SCDF's `runtime/apps` 
+
 ![SCDF Monitoring Prometheus and Service Discovery and PromRegator](src/test/resources/images/scdf-micrometer-prometheus-promregator-pcf.png "PromRegator SCDF with Prometheus and Service-Discovery")
 
 ```bash
@@ -63,8 +66,14 @@ java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
 
 
 ### Build
-
+* Build `spring-cloud-dataflow-prometheus-service-discovery.jar` 
+```bash
+./mvnw clean install
 ```
+
+* Publish the `springcloud/spring-cloud-dataflow-prometheus-service-discovery` image to `DockerHub`
+
+```bash
 ./mvnw clean install docker:build -Pspring
 ./mvnw -Ddocker.username=xxx -Ddocker.password=xxx clean install docker:push -Pspring
 ```
