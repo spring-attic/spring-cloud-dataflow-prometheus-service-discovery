@@ -35,18 +35,18 @@ The `metrics.prometheus.target.filePath` property specifies the path and the nam
 ![SCDF Monitoring Prometheus and Service Discovery](src/test/resources/images/scdf-micrometer-prometheus-grafana-architecture.png "Local SCDF with Prometheus and Service-Discovery")
 
 
-> `SCDF_HOST_IP` should point to the actual IP of the host where SCDF runs (127.0.0.1 would not work in docker-compose settings)
-
 ```bash
-export SCDF_HOST_IP=Your-Local-Host-IP
-
 java -jar spring-cloud-dataflow-prometheus-service-discovery.jar \
-   --metrics.prometheus.target.discoveryUrl=http://${SCDF_HOST_IP}:9393/runtime/apps \
+   --metrics.prometheus.target.discoveryUrl=http://<DATAFLOW IP>:9393/runtime/apps \
    --metrics.prometheus.target.filePath=/tmp/scdf-targets/targets.json \
    --metrics.prometheus.target.cron=0/30 * * * * * \
    --metrics.prometheus.target.mode=local \
-   --metrics.prometheus.target.overrideIp=${SCDF_HOST_IP}
+   --metrics.prometheus.target.overrideIp=<SKIPPER IP>
 ```
+
+When run on the local host, both the `DATAFLOW IP` and the `SKIPPER IP` can point to `127.0.0.1`.
+But when run inside a docker-compose the `DATAFLOW IP`should be substituted by the datafalow container name  (for example `dataflow-server`) 
+`SKIPPER IP` by the skipper container name (e.g. something like `skipper-server`). The 127.0.0.1 would not work in docker-compose settings!
 
 ## PromRegator Mode
 
