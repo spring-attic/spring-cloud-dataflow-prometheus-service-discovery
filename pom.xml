@@ -5,7 +5,7 @@
 
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-dataflow-prometheus-service-discovery</artifactId>
-	<version>0.0.4.RELEASE</version>
+	<version>0.0.5.BUILD-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>spring-cloud-dataflow-prometheus-service-discovery</name>
